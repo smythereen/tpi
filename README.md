@@ -93,6 +93,51 @@ sys atomic far map sem now mio tp tpi
 
 Or add this unit on its own with `repo add <unit>`.
 
+## Using this unit from C++
+
+This unit can be used from **C and C++**. Keep the unit's `.c` implementation
+files compiled as C with `gcc`/`CC`; compile your C++ client with `g++`/`CXX`
+and use `g++` for the final mixed-language link. There is no need to rebuild
+the C library as C++.
+
+Base's shared rules recognize C++ product sources named `.cc` and compile
+them with `CXX` and `CXXFLAGS` (for example `make CXX=g++`). `CPP` names
+the preprocessor, not the C++ compiler. The commands below assume the
+headers and libraries have already been installed into `$HOME/cmn` and
+`$HOME/lib`. GNU C++17 on Linux x86-64 is the example target; GNU extensions
+in the shared types/headers are intentional.
+
+`tpi.h` and its nested `common.h` guard their declarations with
+`extern "C"`; include them directly. `tpi_t` has the real struct tag
+`tpi_s`, but using the typedef is simplest. Zero-initialize the complete
+record, including `Threshold`, then call `TPI_Initialize`. For a file name,
+pass a mutable array; `nullptr` disables the interval output file here.
+The C library's use of `atomic_32.h` does not require a C++ client to include
+any atomic headers.
+
+Save as `use_tpi.cc`:
+
+```cpp
+#include <tpi.h>
+int main() {
+    tpi_t counter{};
+    TPI_Initialize(&counter, 0, nullptr); // No interval file or timed rollover.
+    TPI_Bump(&counter, 1, 0);
+    return counter.Count == 1 ? 0 : 1;
+}
+```
+
+```sh
+g++ -std=gnu++17 -I"$HOME/cmn" use_tpi.cc -L"$HOME/lib" -ltpi -lmio -lmap -lsem -lfar -lnow -lsys -lquadmath -lm -o use_tpi
+./use_tpi
+```
+
+The C++ example above was compiled, linked and run on Linux x86-64 using
+Clang 22.1.8 via `zig c++ -std=gnu++17 -nostdlib++`, with GCC 14.2-built C
+objects where needed. It uses no C++ standard-library runtime. The `g++`
+command is the GNU-toolchain form; that driver was not available for this
+smoke check. This is not an exhaustive API or concurrency test.
+
 ## License
 
 The original files are offered under `Apache-2.0 OR GPL-2.0-or-later`;
