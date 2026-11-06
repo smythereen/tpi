@@ -1,0 +1,8 @@
+# UNIT.deps for tpi
+base 1
+require far
+require map
+require mio
+require now
+require sem
+require sys
